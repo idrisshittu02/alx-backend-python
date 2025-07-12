@@ -13,7 +13,7 @@ def stream_users_in_batches(batch_size):
     while True:
         batch = cursor.fetchmany(batch_size)
         if not batch:
-            break
+            return
         for row in batch:
             row["age"] = int(row["age"])
         yield batch
