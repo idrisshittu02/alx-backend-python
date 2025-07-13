@@ -1,12 +1,11 @@
 import sqlite3
 import functools
 
+# ✅ Decorator to log SQL queries
 def log_queries(func):
-    """Decorator to log SQL queries"""
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        # Try to extract the query string from args or kwargs
-        query = kwargs.get('query') if 'query' in kwargs else args[0] if args else None
+        query = kwargs.get("query") or (args[0] if args else "")
         print(f"Executing SQL Query: {query}")
         return func(*args, **kwargs)
     return wrapper
@@ -20,6 +19,7 @@ def fetch_all_users(query):
     conn.close()
     return results
 
-# Fetch users while logging the query
+# ✅ Run the decorated function
 users = fetch_all_users(query="SELECT * FROM users")
 print(users)
+
