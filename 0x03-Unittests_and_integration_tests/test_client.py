@@ -94,10 +94,15 @@ class TestIntegrationGithubOrgClient(unittest.TestCase):
         cls.get_patcher = patch("requests.get")
         cls.mock_get = cls.get_patcher.start()
 
-        cls.mock_get.side_effect = [
-            Mock(**{"json.return_value": cls.org_payload}),
-            Mock(**{"json.return_value": cls.repos_payload}),
-        ]
+        # Dynamic side_effect based on URL
+        def side_effect(url, *args, **kwargs):
+            if "orgs" in url and "repos" not in url:
+                return Mock(**{"json.return_value": cls.org_payload})
+            elif "repos" in url:
+                return Mock(**{"json.return_value": cls.repos_payload})
+            return Mock(**{"json.return_value": {}})
+
+        cls.mock_get.side_effect = side_effect
 
     @classmethod
     def tearDownClass(cls):
