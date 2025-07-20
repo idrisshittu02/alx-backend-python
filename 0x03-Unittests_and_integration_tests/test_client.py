@@ -3,7 +3,7 @@
 
 import unittest
 from unittest.mock import patch, Mock, PropertyMock
-from parameterized import parameterized, parameterized_class
+from parameterized import parameterized_class
 from client import GithubOrgClient
 from fixtures import org_payload, repos_payload, expected_repos, apache2_repos
 
