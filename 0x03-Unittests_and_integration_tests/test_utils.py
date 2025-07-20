@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Unit tests for the utils module on access_nested_map, get_json,memoize."""
+"""Unit tests for the utils module.
+
+Covers access_nested_map, get_json, and memoize.
+"""
 
 import unittest
 from parameterized import parameterized
