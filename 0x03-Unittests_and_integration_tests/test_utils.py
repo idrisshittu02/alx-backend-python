@@ -10,7 +10,7 @@ from utils import memoize
 
 
 class TestAccessNestedMap(unittest.TestCase):
-    """Test the access_nested_map function"""
+    """Tests for access_nested_map"""
 
     @parameterized.expand([
         ({"a": 1}, ("a",), 1),
@@ -18,11 +18,12 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
     def test_access_nested_map(self, nested_map, path, expected):
+        """Test successful nested access"""
         self.assertEqual(access_nested_map(nested_map, path), expected)
 
 
 class TestAccessNestedMapException(unittest.TestCase):
-    """Test exceptions in access_nested_map"""
+    """Tests for access_nested_map exceptions"""
 
     @parameterized.expand([
         ({}, ("a",)),
@@ -38,7 +39,7 @@ class TestAccessNestedMapException(unittest.TestCase):
 
 
 class TestGetJson(unittest.TestCase):
-    """Test the get_json function"""
+    """Tests for get_json"""
 
     @parameterized.expand([
         ("http://example.com", {"payload": True}),
@@ -58,6 +59,7 @@ class TestMemoize(unittest.TestCase):
     """Test the memoize decorator"""
 
     def test_memoize(self):
+        """Test that memoized method only calls underlying method once"""
         class TestClass:
             def a_method(self):
                 return 42
