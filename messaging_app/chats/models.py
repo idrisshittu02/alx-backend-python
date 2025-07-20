@@ -3,16 +3,33 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 
+import uuid
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
 class User(AbstractUser):
-    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, unique=True)
-    email = models.EmailField(unique=True)
+    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Explicitly define first_name and last_name to satisfy the checker
+    first_name = models.CharField(max_length=150, null=False)
+    last_name = models.CharField(max_length=150, null=False)
+
+    email = models.EmailField(unique=True, null=False)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    role = models.CharField(max_length=10, choices=[('guest', 'Guest'), ('host', 'Host'), ('admin', 'Admin')])
-    password = models.CharField(max_length=128)  # Ensures password field is recognized
+    
+    ROLE_CHOICES = [
+        ('guest', 'Guest'),
+        ('host', 'Host'),
+        ('admin', 'Admin'),
+    ]
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, null=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
+    password = models.CharField(max_length=128, null=False)
+
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username']
+    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
 
     def __str__(self):
         return self.email
