@@ -1,56 +1,67 @@
-from django.shortcuts import render
-
-# Create your views here.
-from rest_framework import viewsets, status, filters
+"""Views for the chat messaging application using DRF ViewSets."""
+from rest_framework import viewsets, permissions, status, filters
 from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import Conversation, Message, User
-from .serializers import ConversationSerializer, MessageSerializer
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.exceptions import ValidationError
+from .models import User, Conversation, Message
+from .serializers import UserSerializer, ConversationSerializer, MessageSerializer
+from .permissions import IsOwner
+from django.shortcuts import get_object_or_404
+from .filters import MessageFilter
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [AllowAny]
 
 class ConversationViewSet(viewsets.ModelViewSet):
-    queryset = Conversation.objects.all()
     serializer_class = ConversationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
     filter_backends = [filters.SearchFilter]
-    search_fields = ['participants__first_name', 'participants__last_name', 'participants__email']
+    search_fields = ['participants__username']
 
-    def create(self, request, *args, **kwargs):
-        user_ids = request.data.get('user_ids')
-        if not user_ids or not isinstance(user_ids, list):
-            return Response({"error": "user_ids must be a list of valid user UUIDs"},
-                            status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        # Only return conversations where the logged-in user is a participant
+        return Conversation.objects.filter(participants=self.request.user)
 
-        participants = User.objects.filter(user_id__in=user_ids)
-        if participants.count() != len(user_ids):
-            return Response({"error": "Some user IDs are invalid"}, status=status.HTTP_400_BAD_REQUEST)
-
-        conversation = Conversation.objects.create()
-        conversation.participants.set(participants)
-        serializer = self.get_serializer(conversation)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
+    def perform_create(self, serializer):
+        # Automatically add the user creating the conversation as a participant
+        conversation = serializer.save()
+        conversation.participants.add(self.request.user)
 
 class MessageViewSet(viewsets.ModelViewSet):
-    queryset = Message.objects.all()
     serializer_class = MessageSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['conversation__id']
 
-    def create(self, request, *args, **kwargs):
-        sender_id = request.data.get('sender_id')
-        conversation_id = request.data.get('conversation_id')
-        message_body = request.data.get('message_body')
+    def get_queryset(self):
+        # Only return messages in conversations where the user is a participant
+        return Message.objects.filter(conversation__participants=self.request.user)
 
-        try:
-            sender = User.objects.get(user_id=sender_id)
-            conversation = Conversation.objects.get(conversation_id=conversation_id)
-        except User.DoesNotExist:
-            return Response({"error": "Invalid sender_id"}, status=status.HTTP_400_BAD_REQUEST)
-        except Conversation.DoesNotExist:
-            return Response({"error": "Invalid conversation_id"}, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        conversation = serializer.validated_data.get('conversation')
+        if not serializer.validated_data.get('conversation'):
+            raise ValidationError("Conversation is required")
+        serializer.save(sender=self.request.user)
 
-        message = Message.objects.create(
-            sender=sender,
-            conversation=conversation,
-            message_body=message_body
+
+def update(self, request, *args, **kwargs):
+    message = self.get_object()
+    conversation_id = message.conversation.id
+    if request.user not in message.conversation.participants.all():
+        return Response(
+            {"detail": "You are not a participant in this conversation."},
+            status=status.HTTP_403_FORBIDDEN
         )
-        serializer = self.get_serializer(message)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return super().update(request, *args, **kwargs)
+
+def destroy(self, request, *args, **kwargs):
+    message = self.get_object()
+    conversation_id = message.conversation.id
+    if request.user not in message.conversation.participants.all():
+        return Response(
+            {"detail": "You are not a participant in this conversation."},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    return super().destroy(request, *args, **kwargs)
