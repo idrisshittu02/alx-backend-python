@@ -1,38 +1,21 @@
 #!/bin/bash
-
-# Define a function to check for required commands
-check_command() {
-  if ! command -v "$1" &> /dev/null; then
-    echo "Error: $1 could not be found."
-    echo "Please install $1 and ensure it is in your PATH."
-    exit 1
-  fi
-}
+# Script to start Kubernetes cluster locally with Minikube
 
 # 1. Check if minikube is installed
-echo "--> Checking for minikube..."
-check_command minikube
-
-# 2. Check if kubectl is installed (it's required to interact with the cluster)
-echo "--> Checking for kubectl..."
-check_command kubectl
-
-# 3. Start the minikube cluster
-echo "--> Starting minikube cluster..."
-minikube start
-
-# Check the exit status of the previous command
-if [ $? -ne 0 ]; then
-  echo "Error: minikube start failed. Please check the output above for details."
-  exit 1
+if ! command -v minikube &> /dev/null
+then
+    echo "❌ Minikube is not installed. Please install it first."
+    exit 1
 fi
 
-# 4. Verify the cluster is running
-echo "--> Verifying cluster info..."
-minikube kubectl -- cluster-info
+# 2. Start the cluster
+echo "🚀 Starting Minikube cluster..."
+minikube start
 
-# 5. Retrieve all available pods (using -A to show all namespaces)
-echo "--> Retrieving all pods..."
-minikube kubectl -- get pods -A
+# 3. Verify that the cluster is running
+echo "🔍 Verifying cluster status..."
+kubectl cluster-info
 
-echo "--> Script finished successfully!"
+# 4. Retrieve available pods
+echo "📦 Listing available pods..."
+kubectl get pods --all-namespaces
