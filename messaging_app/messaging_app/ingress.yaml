@@ -32,4 +32,4 @@ spec:
                 port:
                   # The port of the service to send traffic to.
                   # This should be the service's port (80), not the container's (8000).
-                  number: 80
+                  number: 8000
