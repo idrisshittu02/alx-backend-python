@@ -1,0 +1,87 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHON = "python3"
+        GITHUB_CREDENTIALS = 'github-credentials-id'   // Jenkins GitHub Credential ID
+        REPO_URL = 'https://github.com/iamarvy/alx-backend-python.git'
+        BRANCH = 'main' // git branch
+
+        // Docker settings
+        DOCKER_REGISTRY = 'docker.io'                   // For Docker Hub use docker.io
+        DOCKER_IMAGE = 'iamarvy/messaging-app'          // Replace with your Docker Hub repo
+        DOCKER_CREDENTIALS = 'docker-credentials-id'    // Jenkins Docker Credential ID
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git(
+                    url: "${REPO_URL}",
+                    branch: "${BRANCH}",
+                    credentialsId: "${GITHUB_CREDENTIALS}"
+                )
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    ${PYTHON} -m venv venv
+                    . venv/bin/activate
+                    pip install --upgrade pip
+                    pip install -r messaging_app/requirements.txt
+                '''
+            }
+        } // pip3 install
+
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    . venv/bin/activate
+                    pytest --junitxml=pytest-report.xml
+                '''
+            }
+            post {
+                always {
+                    junit 'pytest-report.xml'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    // Tag with both build number and commit hash for traceability
+                    COMMIT_HASH = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+                    IMAGE_TAG = "${BUILD_NUMBER}-${COMMIT_HASH}"
+                    dockerImage = docker.build("${DOCKER_IMAGE}:${IMAGE_TAG}")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", "${DOCKER_CREDENTIALS}") {
+                        dockerImage.push("${IMAGE_TAG}")   // Push versioned tag
+                        dockerImage.push("latest")         // Push/update latest
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Cleaning up..."
+            sh 'rm -rf venv'
+        }
+        success {
+            echo "✅ Build, test, and Docker push completed successfully!"
+        }
+        failure {
+            echo "❌ Pipeline failed. Check logs and reports."
+        }
+    }
+}
